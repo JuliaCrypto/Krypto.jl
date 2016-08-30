@@ -22,7 +22,7 @@ type RSAPrivKey <: RSAKey
     o::Array{UInt8, 1}    # Octet array representation of RSA key (n, e)
     hex::AbstractString   # Hex representation of RSA key (n, e)
 end
-RSAPrivKey() = RSAPrivKey(0, 0, Array{UInt8, 1}(), "")
+RSAPrivKey() = RSAPrivKey(0, 65537, Array{UInt8, 1}(), "")
 
 # RFC-3447/4.1
 function IP2OS{T<:Integer, L<:Integer}(x::T, xLen::L)
@@ -32,8 +32,7 @@ function IP2OS{T<:Integer, L<:Integer}(x::T, xLen::L)
     while length(X) < xLen append!(X, 0o0) end
     return reverse(X)
 end
-
-IP2OS{T<:Integer}(x::T) = IP2OS(x, div(Krypto.bitsize(x), 8))
+IP2OS{T<:Integer}(x::T) = IP2OS(x, div(bitsize(x), 8))
 
 # RFC-3447/4.2
 function OS2IP(X::Array{UInt8, 1})
@@ -68,7 +67,7 @@ end
 
 # RFC-3447/5.2.2
 function RSAVP1(pubkey::RSAPubKey, m::Integer)
-    if m > pubkey.n - 1 || m < 0 error("Signature representative out of range") end
+    if m > pubkey.n - 1 || m < 0 error("Signature representative out of range.") end
     return powermod(m, pubkey.e, pubkey.n)
 end
 
@@ -78,7 +77,7 @@ function RSAES_PKCS1_V1_5_ENCRYPT(pubkey::RSAPubKey, M::Array{UInt8, 1})
     k = length(IP2OS(pubkey.n))
     mLen = length(M)
     if mLen > k - 11 error("Message too long.") end
-    PS = [Krypto.csrand(0o1:0o255) for i in 1:(k - mLen - 3)]
+    PS = [csrand(0o1:0o255) for i in 1:(k - mLen - 3)]
     EM = vcat([0o0, 0o2], PS, [0o0], M)
     m = OS2IP(EM)
     c = RSAEP(pubkey, m)
@@ -141,15 +140,15 @@ end
 function RSAKeyGen{T<:Integer}(b::T, e::T = 65537, newe::Bool = false, ERR::Int8 = Int8(75))
     if (b - 1024) % 256 != 0 error("Number of bits should be in form b = 1024 + 256x.") end
     p = q = BigInt(1)
-    while Krypto.bitsize(BigInt(p * q)) < b
-        p = BigInt(Krypto.csprime(div(b, 2), ERR))
-        q = BigInt(Krypto.csprime(div(b, 2), ERR))
+    while bitsize(BigInt(p * q)) < b
+        p = BigInt(csprime(div(b, 2), ERR))
+        q = BigInt(csprime(div(b, 2), ERR))
     end
     N = BigInt(p * q)
     phi = BigInt(N - (p + q - 1))
     if newe
-        e = BigInt(Krypto.csrand(1:phi))
-        while gcd(e, phi) != 1 e = Krypto.csrand(1:phi) end
+        e = BigInt(csrand(1:phi))
+        while gcd(e, phi) != 1 e = csrand(1:phi) end
     end
     PUB  = RSAPubKey(N, e, Array{UInt8, 1}(), "")
     PRIV = RSAPrivKey(N, invmod(e, phi), Array{UInt8, 1}(), "")
@@ -158,7 +157,12 @@ end
 
 
 ## SHORTHANDS ##
-RSAEncrypt(pubkey::RSAPubKey, M::Array{UInt8, 1}) = RSAES_PKCS1_V1_5_ENCRYPT(pubkey, M)
+RSAEncrypt(pubkey::RSAPubKey,   M::Array{UInt8, 1}) = RSAES_PKCS1_V1_5_ENCRYPT(pubkey, M)
 RSADecrypt(privkey::RSAPrivKey, C::Array{UInt8, 1}) = RSAES_PKCS1_V1_5_DECRYPT(privkey, C)
-RSASign(privkey::RSAPrivKey, M::Array{UInt8, 1}) = RSASSA_PKCS1_V1_5_SIGN(privkey, M)
-RSAVerify(pubkey::RSAPubKey, M::Array{UInt8, 1}, S::Array{UInt8, 1}) = RSASSA_PKCS1_V1_5_VERIFY(pubkey, M, S)
+RSASign(privkey::RSAPrivKey,    M::Array{UInt8, 1}) = RSASSA_PKCS1_V1_5_SIGN(privkey, M)
+RSAVerify(pubkey::RSAPubKey,    M::Array{UInt8, 1}, S::Array{UInt8, 1}) = RSASSA_PKCS1_V1_5_VERIFY(pubkey, M, S)
+
+encrypt(::RSA, K::RSAPubKey,  M::Array{UInt8, 1}) = RSAEncrypt(K, M)
+decrypt(::RSA, K::RSAPrivKey, C::Array{UInt8, 1}) = RSADecrypt(K, C)
+sign(::RSA,    K::RSAPrivKey, M::Array{UInt8, 1}) = RSASign(K, M)
+verify(::RSA,  K::RSAPubKey,  C::Array{UInt8, 1}) = RSAVerify(K, C)

@@ -14,7 +14,7 @@ T = [[csrand(0o1:0o255) for i in 1:256],
 
 # Key generation
 # FIXME: Travis is erroring on keygen...
-B = 4096
+B = 2048
 print("Generating $(B)-bit RSA keypair ... ")
 @time PUB, PRIV = RSAKeyGen(B)
 println("RSA Modulus n: $(hex(PUB.n))")

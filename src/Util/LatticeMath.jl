@@ -10,13 +10,12 @@
 using Krypto
 using Primes
 using Polynomials
-using Distributions
 
 # Find the primitive root
-function primroot(n::Integer)::Integer
+function primroot(n::Integer) #::Integer
     if n < 2 return 1 end
     while true
-        R = rand(RandomDevice(), 2:(n - 1))
+        R = rand(RandomDevice(), 2:n)
         c = false
         for F in factor(n - 1)
             if c break end
@@ -36,8 +35,8 @@ function UniformSample(B::Integer, L::Integer, q::Integer)
 end
 
 # Forward Number Theoretic Transform, with mod q
-function NTT(a::Poly, q::Integer)::Poly
-    A = a
+function NTT(a::Poly, q::Integer) #::Poly
+    A, m = a, 1
     for m in 2:(2m):div(degree(a), 2)
         ψ = primroot(m)
         ω = Int64(round(sqrt(ψ)))
@@ -53,7 +52,7 @@ function NTT(a::Poly, q::Integer)::Poly
                 A[j + k + m] = (u1 - t1) % q
                 A[j + k + m + 1] = (u2 - t2) % q
             end
-            ω = ωψ % q
+            ω = (ω * ψ) % q
         end
     end
 
@@ -64,13 +63,13 @@ function NTT(a::Poly, q::Integer)::Poly
         u1 = A[2j] % q
         A[2j] = (u1 + t1) % q
         A[2j + 1] = (u1 - t1) % q
-        ω = ωψ % q
+        ω = (ω * ψ) % q
     end
 end
 
 # Inverse NTT, with mod q
-function INTT(a::Poly, q::Integer)::Poly
-    A = a
+function INTT(a::Poly, q::Integer) #::Poly
+    A, m = a, 1
     for m in 1:(2m):div(degree(a), 2)
         ψ = primroot(m)
         ω = 1
@@ -86,7 +85,7 @@ function INTT(a::Poly, q::Integer)::Poly
                 A[2(k + j) + 1] = (u2 + t2) % q
                 A[2(k + j) + m + 1] = (u2 - t2) % q
             end
-            ω = ωψ % q
+            ω = (ω * ψ) % q
         end
     end
 
@@ -97,7 +96,7 @@ function INTT(a::Poly, q::Integer)::Poly
         t = (ω * a[j + 1]) % q
         a[j] = (u + t) % q
         a[j + 1] = (u - t) % q
-        ω = ωψ % q
+        ω = (ω * ψ) % q
     end
 
     ω_2 = UInt32(3383)
@@ -105,24 +104,24 @@ function INTT(a::Poly, q::Integer)::Poly
     ν = 7651  # Scaling
     ω = 1
     for j in 0:degree(a)
-        if iseven(j) a[j] = (a[j] * ων) % q; ω = ωψ % q
+        if iseven(j) a[j] = (a[j] * ων) % q; ω = (ω * ψ) % q
         else a[j] = (a[j] * ω_2 * ν) % q; ω_2 = (ω_2 * ψ) % q end
     end
 end
 
 # Generate a polynomial A in ring (only for testing)
-function GenerateA(L::Integer, q::Integer, nttbool::Bool = false)::Poly
+function GenerateA(L::Integer, q::Integer, nttbool::Bool = false) #::Poly
     A = Array{Int64, 1}()
     for i in 1:div(L, 2)
         r = rand(RandomDevice(), UInt16)
         append!(A, (r & 0xffff) % q)
         append!(A, (r >> 16) % q)
     end
-    return nttboll ? NTT(Poly(A)) : Poly(A)
+    return nttbool ? NTT(Poly(A), q) : Poly(A)
 end
 
 # Generate a polynomial R2 in ring
-function GenerateR2(L::Integer, q::Integer, nttbool::Bool = false)::Poly
+function GenerateR2(L::Integer, q::Integer, nttbool::Bool = false) #::Poly
     R2 = Array{Int64, 1}()
     while length(R2) < L
         r = rand(RandomDevice(), UInt16)
@@ -134,18 +133,18 @@ function GenerateR2(L::Integer, q::Integer, nttbool::Bool = false)::Poly
             r >>= 2
         end
     end
-    return nttbool ? NTT(R2) : R2
+    return nttbool ? NTT(Poly(R2), q) : Poly(R2)
 end
 
 # Trivially encode an octet array into a message polynomial
-function bytes2poly(M::Aray{UInt8, 1})::Poly
+function bytes2poly(M::Array{UInt8, 1}) #::Poly
     O = Array{Int64, 1}()
     for i in 1:length(M) append!(O, M[i]) end
     return Poly(O)
 end
 
 # Trivially decode a message polynomial into an octet array
-function poly2bytes(M::Poly)::Aray{UInt8, 1}
+function poly2bytes(M::Poly) #::Aray{UInt8, 1}
     O = Array{UInt8, 1}()
     for i in 1:degree(M) append!(O, M[i]) end
     return O

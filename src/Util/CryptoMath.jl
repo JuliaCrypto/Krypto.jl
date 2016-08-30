@@ -9,7 +9,7 @@ import Primes: isprime
 # Get integer bitsize
 function bitsize{T<:Integer}(N::T)
     b = BigInt(0)
-    while N >> b > 0 b += 1 end
+    while N >> 1 > 0 b += 1 end
     return b
 end
 
@@ -28,7 +28,7 @@ function csrand{T<:Integer}(b::T)
     for i in 1:b append!(O, rand(R, 0o0:0o255)) end
     return O
 end
-csrand{T<:Integer}(r::UnitRange{T} = 1:2147483647) = rand(RandomDevice(), r)
+csrand{T<:Integer}(t::UnitRange{T}) = rand(RandomDevice(), t)
 
 function csrandbit{T<:Integer}(b::T)
     O = "0b"
@@ -38,7 +38,7 @@ end
 
 # Sieve of Atkin - fast prime generator
 # Author of this piece of code: @VicDrastik
-# For reference: 
+# For reference:
 #   - https://en.wikipedia.org/wiki/Sieve_of_Atkin
 #   - https://github.com/JuliaLang/julia/issues/11594#issuecomment-109753437
 function e5(s::BitArray{1})
@@ -135,4 +135,3 @@ function gprimemod(N::Integer, M::Integer, R::Integer = 1)
     while N % M != R && !isprime(N, 75) N = gprime(N + 2) end
     return N
 end
-

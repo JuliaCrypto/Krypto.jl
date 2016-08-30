@@ -4,7 +4,10 @@ using Compat
 using SHA
 using Primes
 using Polynomials
-using Distributions
+
+########  Generic  ########
+export encrypt, decrypt, sign, verify
+
 
 ########  RSA.jl  ########
 export RSAKey, RSAPubKey, RSAPrivKey,                         # RSA Key Objects
@@ -23,8 +26,7 @@ export ECCKey, ECCPubKey, ECCPrivKey                      # ECC Key objects
 ########  RLWE.jl  --  Ring Learning with Errors  ########
 export RLWEKey, RLWEPubKey, RLWEPrivKey,                 # RLWE Key Objects
        RLWEKeyGen,                                       # RLWE Key Generation Primitive
-       RLWEEncrypt, RLWEDecrypt,                         # RLWE Cryptographic Primitives
-       encrypt, decrypt                                  # Std. encrypt/decrypt
+       RLWEEncrypt, RLWEDecrypt                          # RLWE Cryptographic Primitives
 
 
 ########  CryptoMath.jl  ########

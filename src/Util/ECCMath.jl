@@ -83,7 +83,7 @@ end
 function mulf(C::CurveFP, jp1, c)
     res = 0
     jp0 = ~(jp1, n)
-    for s in cryptomath.signbin(c)
+    for s in signbin(c)
         res = doublef(C, res)
         if s != 0 res = s > 0 ? C ++ res ++ jp1 : C ++ res ++ jp0 end
     end
@@ -92,8 +92,8 @@ end
 
 # Hyper-optimized scalar multiplication
 function muladdf(C::CurveFP, jp1, c1, jp2, c2)
-    s1 = cryptomath.signbin(c1)
-    s2 = cryptomath.signbin(c2)
+    s1 = signbin(c1)
+    s2 = signbin(c2)
     diff = len(s2) - len(s1)
     if diff > 0 s1 = vcat([0 for i in 1:(diff)], s1)
     elseif diff < 0 s2 = vcat([0 for i in 1:(-diff)], s2) end
@@ -111,36 +111,22 @@ function muladdf(C::CurveFP, jp1, c1, jp2, c2)
 end
 
 # Hyper-optimized scalar multiplication for xy-coordinates
-function muladdp(C::CurveFP, p1, c1, p2, c2)
-    return proj2norm(muladdf(C, norm2proj(p1), c1, norm2proj(p2), c2), n)
-end
+muladdp(C::CurveFP, p1, c1, p2, c2) = proj2norm(muladdf(C, norm2proj(p1), c1, norm2proj(p2), c2), n)
 
 # Multiply point p by c using fast multiplication
-function mulp(C::CurveFP, p1, c)
-    return proj2norm(mulf(C, norm2proj(p1), c), n)
-end
+mulp(C::CurveFP, p1, c) = proj2norm(mulf(C, norm2proj(p1), c), n)
 
 # Find curve parameter q mod n having point (x, y) and parameter p
-function curve_q(x, y, p, n)
-    return ((x * x - p) * x - y * y) % n
-end
+curve_q(x, y, p, n) = ((x * x - p) * x - y * y) % n
 
 # Test, whether the given point is on the curve (p, q, n)
-function in(p, C::CurveFP)
-    return p != 0 ? (p[1]^3 - p * p[1] - q) % n == y^2 % n : true
-end
+in(p, C::CurveFP) = p != 0 ? (p[1]^3 - p * p[1] - q) % n == y^2 % n : true
 
 # Transform point p given as (x, y) to projective coordinates
-function norm2proj(p)
-    return p != 0 ? (p[0], p[1], 1, 1, 1) : 0
-end
+norm2proj(p) = p != 0 ? (p[0], p[1], 1, 1, 1) : 0
 
 # Transform a point from projective coordinates to (x, y) mod n
-function proj2norm(jp, n)
-    return jp != 0 ? ((jp[0] * cmath.imod(jp[3], n)) % n, (jp[1] * cmath.imod(jp[4], n)) % n) : 0
-end
+proj2norm(jp, n) = jp != 0 ? ((jp[0] * imod(jp[3], n)) % n, (jp[1] * imod(jp[4], n)) % n) : 0
 
 # Compute the inverse point to p in any coordinate system
-function ~(p, n)
-    return p != 0 ? (p[0], (n - p[1]) % n) + p[2:end] : 0
-end
+~(p, n) = p != 0 ? (p[0], (n - p[1]) % n) + p[2:end] : 0
