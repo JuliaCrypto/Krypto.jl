@@ -1,7 +1,5 @@
 # Various mathematical utils for cryptography processes.
 # Copyright (C): Jaka Smrekar (vinctux) <vinctux@outlook.com>, 2016
-#
-# PyCrypto (https://github.com/dlitz/pycrypto) as Pythonic reference
 
 using Primes
 import Primes: isprime
@@ -13,8 +11,25 @@ function bitsize{T<:Integer}(N::T)
     return b
 end
 
+# Get reversed bit-order of x
+# See: https://graphics.stanford.edu/~seander/bithacks.html
+function rev{T<:Integer}(x::T)
+    x = (((x & 0xaaaaaaaa) >> 1) | ((x & 0x55555555) << 1))
+    x = (((x & 0xcccccccc) >> 2) | ((x & 0x33333333) << 2))
+    x = (((x & 0xf0f0f0f0) >> 4) | ((x & 0x0f0f0f0f) << 4))
+    x = (((x & 0xff00ff00) >> 8) | ((x & 0x00ff00ff) << 8))
+    return ((x >> 16) | (x << 16))
+end
+
+# Get reversed bit-order for every N in X
+function rev{T<:Integer}(X::Array{T, 1})
+    A = Array{T, 1}()
+    for N in X append!(A, rev(N)) end
+    return A
+end
+
 # Get first power of E, greater than N
-function gpow(N::Integer, E::Integer = 2)
+function gpow{T<:Integer}(N::T, E::Integer = 2)
     if N <= 0 return 0 end
     x, I = N, 0
     while x <= N x *= E; I += 1 end
@@ -23,8 +38,7 @@ end
 
 # Produce cryptographically-secure octet array of length b
 function csrand{T<:Integer}(b::T)
-    R = RandomDevice()
-    O = Array{UInt8, 1}()
+    R, O = RandomDevice(), Array{UInt8, 1}()
     for i in 1:b append!(O, rand(R, 0o0:0o255)) end
     return O
 end
@@ -33,6 +47,11 @@ csrand{T<:Integer}(t::UnitRange{T}) = rand(RandomDevice(), t)
 function csrandbit{T<:Integer}(b::T)
     O = "0b"
     for i in 1:b O *= csrand(0:1) == 0 ? "0" : "1" end
+    return parse(BigInt, O)
+end
+function randbit{T<:Integer}(b::T)
+    O = "0b"
+    for i in 1:b O *= rand(0:1) == 0 ? "0" : "1" end
     return parse(BigInt, O)
 end
 
@@ -61,7 +80,7 @@ function csprime{T<:Integer}(b::T, ERR::Int8 = Int8(75))
     F = falses(5 * length(sieve_base))
     _S = [BigInt(i) for i in 1:length(sieve_base) if sieve_base[i]]
     for y in [y1, y2]
-        # TODO: Optimize with native zip - don't compute twice
+        # FIXME: Optimize with native zip - don't compute twice
         S = [(y % i, i) for i in 1:length(sieve_base) if sieve_base[i]]
         for i in 1:length(S) for j in (y + S[i][1] - S[i][2]):S[i][2]:length(F) F[j] = true end end
         for i in 1:length(F)
@@ -111,10 +130,8 @@ end
 function signbin{T<:Integer}(n::T)
     r = Array{Int8, 1}()
     while n > 1
-        if n & 1 == 0
-            cp = gbd(n + 1)
-            cn = gbd(n - 1)
-            if cp > cn append!(r, -1); n += 1
+        if n & 1 == 0w
+            if gbd(n + 1) > gbd(n - 1) append!(r, -1); n += 1
             else append!(r, 1); n -= 1 end
         else append!(r, 0) end
         n >>= 1

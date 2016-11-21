@@ -5,12 +5,12 @@ A futuristic crypto library. In Julia.
 100% pure [Julia](https://github.com/JuliaLang/julia) implementations of most popular cryptographic algorithms. Contains native implementations of PQC ([Post-Quantum Cryptography](https://en.wikipedia.org/wiki/Post-quantum_cryptography)). Contributions welcome.
 
 ## Disclaimer
-**WARNING: This package is an ALPHA and is NOT yet ready for production use. Its current state is more like a PoC implementation. Proceed at your own risk.**
+**WARNING: This package is in a Proof-of-Concept state and is NOT (yet) ready for production use. Proceed at your own risk.**
 
 ## Current features
 - 100% native Julia implementations. No wrappers. No non-Julia dependencies.
 - Support for RSA (working primitives, [PKCS#1](https://en.wikipedia.org/wiki/PKCS_1) not working)
-- Support for RLWE (non-tested primitives)
+- Support for RLWE (non-working primitives; working, non-reviewed cryptoscheme)
 - Support for ECC math (no primitives of yet)
 
 ## Algorithms
@@ -34,11 +34,11 @@ Implementation status: **complete**, *partial*. The higher an algorithm is liste
 - [Salsa20](https://en.wikipedia.org/wiki/Salsa20)
 - [Rabbit](https://en.wikipedia.org/wiki/Rabbit_(cipher))
 
-## Quality note
-[I (vinctux)](https://github.com/vinctux) do my best to make this code work properly and in a secure manner but as I currently do not hold a degree in Cryptography or simmiliar, some could say I do not have the required knowledge to build such a library. I somehow agree with that. I'm not the person who would be called first for this job. But eventually, nobody did a native Julia cryptography library yet. So I decided to do it. IMHO, holding a degree doesn't make your words facts yet. You (as the user) shouldn't blindly trust this code. As a passionated hobby cryptographer, I do know about cryptography pretty something but eventually severe vulnarbities CAN happen.
-
-Oh, a friendly recommendation: DON'T ULTIMATELLY TRUST _ANY_ code with your life.
-Cryptography or anything else.
+## Dependencies
+`Krypto.jl` requires some packages to run properly. Besides the `julia` binary, you'll need the following.
+- `SHA` (general use of SHA), at least `0.3`
+- `Primes` (needed by RSA and others), at least `0.1.1`
+- `Polynomials` (needed by RLWE), at least `0.1.0`
 
 ## License
 MIT. Whatever happens to you, remember: it's not my fault but the code you used is. ¯\\_(ツ)_/¯

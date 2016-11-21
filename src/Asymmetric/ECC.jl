@@ -3,8 +3,6 @@
 #
 # PyECC (https://github.com/amintos/PyECC) as Pythonic reference
 
-# TODO: Write comment-like documentation for existent code.
-
 importall Base
 using Krypto
 

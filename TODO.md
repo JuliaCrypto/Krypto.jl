@@ -1,6 +1,5 @@
 # TODOs
 - Update documentation (or at least, create it)
-- Add RLWE cryptosystem logic (lattice-based PQC)
 - Add ECC keygen and encryption primitives
 - Add NTRU cryptosystem logic (lattice-based PQC)
 - Add AES (Rijndael)

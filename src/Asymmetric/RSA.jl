@@ -74,14 +74,11 @@ end
 # FIXME: RSAES_PKCS1_V1_5_ENCRYPT not working properly.
 # RFC-3447/7.2.1
 function RSAES_PKCS1_V1_5_ENCRYPT(pubkey::RSAPubKey, M::Array{UInt8, 1})
-    k = length(IP2OS(pubkey.n))
-    mLen = length(M)
-    if mLen > k - 11 error("Message too long.") end
+    k, mLen = length(IP2OS(pubkey.n)), length(M)
+    mLen > k - 11 && error("Message too long.")
     PS = [csrand(0o1:0o255) for i in 1:(k - mLen - 3)]
     EM = vcat([0o0, 0o2], PS, [0o0], M)
-    m = OS2IP(EM)
-    c = RSAEP(pubkey, m)
-    C = IP2OS(c, k)
+    m, c, C = OS2IP(EM), RSAEP(pubkey, m), IP2OS(c, k)
     return C
 end
 
@@ -89,16 +86,12 @@ end
 # RFC-3447/7.2.2
 function RSAES_PKCS1_V1_5_DECRYPT(privkey::RSAPrivKey, C::Array{UInt8, 1})
     k = length(IP2OS(privkey.n))
-    if length(C) != k error("Decryption error.") end
-    c = OS2IP(C)
-    m = RSADP(privkey, c)
-    EM = IP2OS(m, k)
-    if EM[1] != 0o0 error("Decryption error.") end
-    if EM[2] != 0o2 error("Decryption error.") end
-    i = 3
-    PS = Array{UInt8, 1}()
+    length(C) != k && error("Decryption error.")
+    EM = IP2OS(RSADP(privkey, OS2IP(C)), k)
+    (EM[1] != 0o0 || EM[2] != 0o2) && error("Decryption error.")
+    i, PS = 3, Array{UInt8, 1}()
     while EM[i] != 0o0 vcat(PS, EM[i]); i += 1 end
-    if i < 8 error("Decryption error.") end
+    i < 8 && error("Decryption error.")
     M = EM[(i + 1):end]
     return M
 end
@@ -106,36 +99,23 @@ end
 # FIXME: RSASSA_PKCS1_V1_5_SIGN not working properly.
 # RFC-3447/8.2.1
 function RSASSA_PKCS1_V1_5_SIGN(privkey::RSAPrivKey, M::Array{UInt8, 1})
-    k = length(IP2OS(privkey.n))
-    EM = EMSA_PKCS1_V1_5_ENCODE(M, k)
-    m = OS2IP(EM)
-    s = RSASP1(privkey, m)
-    S = IP2OS(s)
-    return S
+    EM = EMSA_PKCS1_V1_5_ENCODE(M, length(IP2OS(privkey.n)))
+    return IP2OS(RSASP1(privkey, OS2IP(EM)))
 end
 
 # FIXME: RSASSA_PKCS1_V1_5_VERIFY not working properly.
 # RFC-3447/8.2.2
 function RSASSA_PKCS1_V1_5_VERIFY(pubkey::RSAPubKey, M::Array{UInt8, 1}, S::Array{UInt8, 1})
     k = length(IP2OS(pubkey.n))
-    if length(S) != k error("Invalid signature.") end
-    s = OS2IP(S)
-    m = RSAVP1(pubkey, s)
-    EM1 = IP2OS(m, k)
-    EM2 = EMSA_PKCS1_V1_5_ENCODE(M, k)
+    length(S) != k && error("Invalid signature.")
+    EM1, EM2 = IP2OS(RSAVP1(pubkey, OS2IP(S)), k), EMSA_PKCS1_V1_5_ENCODE(M, k)
     return EM1 == EM2
 end
 
 # TODO: Use DER/BER encoding standard before concating.
-# TODO: Add support for other hash algorithms (outside of SHA.jl)
-# TODO: Add choice for SHA.jl algorithm and bitsize (out of 9 currently implemented)
 # RFC-3447/9.1
-function EMSA_PKCS1_V1_5_ENCODE(M::Array{UInt8, 1}, k::Integer)
-    mLen = length(M)
-    H = SHA.sha3_512(M)
-    EM = vcat([0o0, 0o1], [0o377 for i in 1:(k - mLen - 3)], [0o0], H)
-    return EM
-end
+EMSA_PKCS1_V1_5_ENCODE{C<:SHA.SHA_CTX}(M::Array{UInt8, 1}, k::Integer, H::C = SHA.SHA3_CTX) =
+    vcat([0o0, 0o1], [0o377 for i in 1:(k - length(M) - 3)], [0o0], update!(H, M))
 
 function RSAKeyGen{T<:Integer}(b::T, e::T = 65537, newe::Bool = false, ERR::Int8 = Int8(75))
     if (b - 1024) % 256 != 0 error("Number of bits should be in form b = 1024 + 256x.") end
@@ -162,7 +142,7 @@ RSADecrypt(privkey::RSAPrivKey, C::Array{UInt8, 1}) = RSAES_PKCS1_V1_5_DECRYPT(p
 RSASign(privkey::RSAPrivKey,    M::Array{UInt8, 1}) = RSASSA_PKCS1_V1_5_SIGN(privkey, M)
 RSAVerify(pubkey::RSAPubKey,    M::Array{UInt8, 1}, S::Array{UInt8, 1}) = RSASSA_PKCS1_V1_5_VERIFY(pubkey, M, S)
 
-encrypt(::RSA, K::RSAPubKey,  M::Array{UInt8, 1}) = RSAEncrypt(K, M)
-decrypt(::RSA, K::RSAPrivKey, C::Array{UInt8, 1}) = RSADecrypt(K, C)
-sign(::RSA,    K::RSAPrivKey, M::Array{UInt8, 1}) = RSASign(K, M)
-verify(::RSA,  K::RSAPubKey,  C::Array{UInt8, 1}) = RSAVerify(K, C)
+encrypt(::Type{Krypto.RSA}, K::RSAPubKey,  M::Array{UInt8, 1}) = RSAEncrypt(K, M)
+decrypt(::Type{Krypto.RSA}, K::RSAPrivKey, C::Array{UInt8, 1}) = RSADecrypt(K, C)
+sign(::Type{Krypto.RSA},    K::RSAPrivKey, M::Array{UInt8, 1}) = RSASign(K, M)
+verify(::Type{Krypto.RSA},  K::RSAPubKey,  C::Array{UInt8, 1}) = RSAVerify(K, C)

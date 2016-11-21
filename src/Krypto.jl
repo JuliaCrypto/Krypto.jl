@@ -9,6 +9,12 @@ using Polynomials
 export encrypt, decrypt, sign, verify
 
 
+########  Crypto types  ########
+export CryptoAlgorithm, SymmetricCryptoAlgorithm, AsymmetricCryptoAlgorithm
+export RSA, RLWE, ECC, NTRU
+export AES, Blowfish, Twofish, Threefish, Serpent
+
+
 ########  RSA.jl  ########
 export RSAKey, RSAPubKey, RSAPrivKey,                         # RSA Key Objects
        RSAKeyGen,                                             # RSA Key Generation Primitive
@@ -50,9 +56,9 @@ export CurveFP,                 # Curve object
 
 
 ########  LatticeMath.jl  ########
-export primroot,                 # Primitive root finding function
-       UniformSample,            # Uniformly sample from -B:B an polynomial in ring
-       NTT, INTT,                # Forward Number Theoretic Transform, with mod q, and its inverse
+export KRED, KRED2,              # Reduction functions (for NTT)
+       UniformSample,            # Uniformly sample from [-B:B] an polynomial in ring
+       NTTK, INTTK,              # Forward Number Theoretic Transform and its inverse
        GenerateA, GenerateR2,    # Generator functions for testing and crypto-deployment
        poly2bytes, bytes2poly    # Trivial en/decode of polynomials into/from octet arrays
 
@@ -62,6 +68,7 @@ export HMAC               # Hash-based message authentication code
 
 
 # Load files
+include("LUT/rlwe.jl")
 include("Util/CryptoTypes.jl")
 include("Util/CryptoMath.jl")
 include("Util/ECCMath.jl")
