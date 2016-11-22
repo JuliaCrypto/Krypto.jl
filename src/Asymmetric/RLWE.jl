@@ -9,47 +9,51 @@
 # x86 C reference: https://github.com/ruandc/Ring-LWE-Encryption/blob/master/x86
 
 using Krypto
-using Polynomials
 
 abstract RLWEKey
 
 type RLWEPubKey <: RLWEKey
-    A::Poly
-    P::Poly
+    A::Array{Int16, 1}
+    P::Array{Int16, 1}
     N::Integer
     Q::LatticeModuli
 end
 
 type RLWEPrivKey <: RLWEKey
-    R::Poly
+    R::Array{Int16, 1}
     N::Integer
     Q::LatticeModuli
 end
 
-global const B = 12                       # Global sampling bound B
-global const Q = LatticeModuli(3, 11, 1)  # Global moduli (== 12289)
+global const B = Int16(12)                # Global sampling bound B
+global const Q = LatticeModuli(3, 12, 1)  # Global moduli (== 12289)
+global const QBY2 = div(Int16(Q), 2)
+global const QBY4 = div(Int16(Q), 4)
 
 # Generates RLWE keypair
-function RLWEKeyGen(A::Poly, N::Integer = 1024)
-    R1 = UniformSample(B, N)
-    R2 = GenerateR2(N)
-    P = R1 - A * R2
-    println("$(P)")
-    return RLWEPubKey(NTTK(A, Q, N), NTTK(P, Q, N), N, Q), RLWEPrivKey(NTTK(R2, Q, N), N, Q)
+function RLWEKeyGen(N::Integer = 1024)
+    A = genrandpoly(N, Q)
+    R1, R2 = UniformSample(B, N), genrandpoly(N, Q)
+    P = R1 - *(A, R2, Q)
+    PUB = RLWEPubKey(NTTK(A, Q, N), NTTK(P, Q, N), N, Q)
+    PRIV = RLWEPrivKey(NTTK(R2, Q, N), N, Q)
+    return PUB, PRIV
 end
 
 # RLWE Encryption primitive
-function RLWEEncrypt(K::RLWEPubKey, M::Poly)
+function RLWEEncrypt(K::RLWEPubKey, M::Array{UInt8, 1})
     ERR = [UniformSample(B, K.N) for i in 1:3]
     E1, E2 = NTTK(ERR[1], K.Q, K.N), NTTK(ERR[2], K.Q, K.N)
-    return K.A * E1 + E2, K.P * E1 + NTTK(ERR[3] + M, K.Q, K.N)
+    M16 = [Int16(x * QBY2) % Int16(Q) for x in M]
+    println(length(M16))
+    C1 = +(*(K.A, E1, K.Q), E2, K.Q)
+    C2 = +(*(K.P, E1, K.Q), NTTK(+(ERR[3], M16), K.Q, K.N), K.Q)
+    return C1, C2
 end
-RLWEEncrypt(K::RLWEPubKey, M::Array{UInt8, 1}) = RLWEEncrypt(K, bytes2poly(M))
 
 # RLWE Decryption primitive
-RLWEDecrypt(K::RLWEPrivKey, C1::Poly, C2::Poly) = INTTK(C1 * K.R + C2, K.Q, K.N)
-RLWEDecrypt(K::RLWEPrivKey, C::Tuple{Poly, Poly}) = RLWEDecrypt(K, C[1], C[2])
-RLWEDecrypt(K::RLWEPrivKey, C1::Array{UInt8, 1}, C2::Array{UInt8, 1}) = RLWEDecrypt(K, bytes2poly(C1), bytes2poly(C2))
+RLWEDecrypt(K::RLWEPrivKey, C1::Array{Int32, 1}, C2::Array{UInt8, 1}) = INTTK(+(*(C1, K.R, K.Q), C2, K.Q), K.Q, K.N)
+RLWEDecrypt(K::RLWEPrivKey, C::Tuple{Array{UInt8, 1}, Array{UInt8, 1}}) = RLWEDecrypt(K, C[1], C[2])
 
 function encrypt(::Type{Krypto.RLWE}, K::RLWEPubKey, M::Array{UInt8, 1})
     C1, C2 = RLWEEncrypt(K, M)

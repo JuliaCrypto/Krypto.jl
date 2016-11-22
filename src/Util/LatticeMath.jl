@@ -21,19 +21,24 @@
 #                  [6]  http://web.maths.unsw.edu.au/~davidharvey/papers/fastntt/
 #                           David Harvey, 2013
 #                           Faster arithmetic for number-theoretic transforms
+#                  [7]  https://www.math.auckland.ac.nz/~sgal018/gen-gaussians.pdf
+#                           Nagarjun C. Dwarakanath and Steven D. Galbraith, 2014
+#                           Sampling from Discrete Gaussians for Lattice-based
+#                                         Cryptography on a constrained Device
 # x86 C reference: [C1] https://github.com/ruandc/Ring-LWE-Encryption/blob/master/x86
 #                  [C2] https://github.com/dconnolly/msr-latticecrypto/blob/master/generic/ntt.c
 #                  [C3] https://github.com/open-quantum-safe/liboqs/tree/master/src/kex_rlwe_bcns15
 
 using Krypto
-using Polynomials
 
 abstract Moduli
 type LatticeModuli <: Moduli
-    k::Integer
-    m::Integer
-    l::Integer
+    k::Int8
+    m::Int8
+    l::Int8
 end
+Int16(x::LatticeModuli) = Int16(x.k * 2^x.m + x.l)
+Int(x::LatticeModuli) = Int16(x)
 
 # K-RED reduction function [5:p7]
 function KRED(C::Integer, Q::LatticeModuli)
@@ -53,10 +58,10 @@ function KRED2(C::Integer, Q::LatticeModuli)
 end
 
 # Optimized Forward NTT-CT with K-RED reduction [5:p9]
-# FIXME: NTTK currently not working. It's trying to access A @ 1537, bound is 1025, although it should be 1024.
-#        Currently set k = n >> 2 (for testing the heuristic), should be k = n.
-function NTTK(a::Poly, Q::LatticeModuli, n::Integer)
-    A, k, N = a.a, n >> 2, 1
+# FIXME: NTTK currently not working. It's trying to access A @ 1537, bound is 1025,
+#        although it should be 1024.
+function NTTK(A::Array{Int16, 1}, Q::LatticeModuli, n::Integer)
+    k, N = n, 1
     for m in vcat([1], [N <<= 1 for _ in 1:(ndigits(n, 2) - 2)])
         k >>= 1
         for i in 0:m
@@ -76,12 +81,12 @@ function NTTK(a::Poly, Q::LatticeModuli, n::Integer)
             end
         end
     end
-    return Poly(A)
+    return A
 end
 
 # Optimized INTT-GS with K-RED reduction [5:p10]
-function INTTK(a::Poly, Q::LatticeModuli, n::Integer)
-    A, k, N = rev(a.a), 1, n << 1
+function INTTK(A::Array{Int16, 1}, Q::LatticeModuli, n::Integer)
+    k, N = 1, n << 1
     for m in [N >>= 1 for _ in 1:(ndigits(N, 2) - 2)]
         j1 = 2
         h = m >> 1
@@ -103,91 +108,75 @@ function INTTK(a::Poly, Q::LatticeModuli, n::Integer)
         k <<= 1
     end
     for j in 1:(k + 1)
-        U = a[j]
-        V = a[j + k]
+        U = A[j]
+        V = A[j + k]
         A[j] = KRED((U + V) * rev(rev(n) * rev(k^11)), Q)
         A[j + k] = KRED((U - V) * rev(rev(n) * rev(k^10) * Ψ_[n][1]), Q)
     end
-    return Poly(A)
+    return A
+end
+
+# Plain NTT-CT from [C1]
+function NTT(A::Array{Int16, 1}, Q::LatticeModuli, n::Integer)
+    i, q, N = 0, Int16(Q), 1
+    for m in [N <<= 1 for _ in 1:(ndigits(n, 2) - 2)]
+        ξ, ω = Ω[i += 1], Ω[i += 1]
+        for j in 1:2:m
+            for k in 0:2m:n
+                u1 = A[j + k]
+                t1 = (ω * A[j + k + 1]) % q
+
+                u2 = A[j + k + m]
+                t2 = (ω * A[j + k + m + 1]) % q
+
+                A[j + k] = (u1 + t1) % q
+                A[j + k + 1] = (u2 + t2) % q
+
+                A[j + k + m] = (u1 - t1) % q
+                A[j + k + m + 1] = (u2 - t2) % q
+            end
+            ω = ω * ξ % Int16(Q)
+        end
+    end
+
+    ξ = 5118
+    ω = 1065
+    for j in 0:(div(n, 2) - 1)
+        t1 = (ω * A[2 * j + 2]) % q
+        u1 = A[2 * j + 1];
+        A[2 * j + 1] = (u1 + t1) % q
+        A[2 * j + 2] = (u1 - t1) % q
+        ω = (ω * ξ) % q
+    end
+    return A
 end
 
 # Uniformly sample from [-B:B] a polynomial in ring
-function UniformSample(B::Integer, N::Integer)
-    if B < 0 error("Bound limit cannot be negative.")
-    elseif B > 2^16 - 1 || B == 0 warn("Bound limit is set to the highest or lowest possible point. Expect errors."); return Poly([0]) end
-    E = Array{Int64, 1}()
-    for i in 0:N append!(E, randbit(B)) end
-    return Poly(E)
+# FIXME: This should be Knuth-Yao.
+function UniformSample(B::Int16, N::Integer)
+    B < 0 && error("Bound limit cannot be negative.")
+    E = Array{Int16, 1}()
+    for i in 1:N append!(E, randbit(B)) end
+    return E
 end
 
-# Generate a polynomial A in ring
-function GenerateA{T<:Integer}(L::T, nttbool::Bool = false)
-    A, R = Array{Int64, 1}(), RandomDevice()
-    for i in 0:div(L, 2)
-        r = rand(R, UInt16)
-        append!(A, (r & 0xffff) % 12289)
-        append!(A, (r >> 16) % 12289)
-    end
-    return nttbool ? NTTK(Poly(A), 12289) : Poly(A)
+# Element-wise multiplication of polynomials, in ring ZZ/Q
+function *(x::Array{Int16, 1}, y::Array{Int16, 1}, Q::LatticeModuli)
+    l = length(x)
+    assert(l == length(y))
+    return [(x[i] * y[i]) % Int16(Q) for i in 1:l]
 end
 
-# Generate a polynomial R2 in ring
-function GenerateR2{T<:Integer}(L::T, nttbool::Bool = false)
-    R2, R = Array{Int64, 1}(), RandomDevice()
-    while length(R2) < L
-        r = rand(R, UInt16)
-        for j in 1:16
-            B, S = r & 1, (r >> 1) & 1
-            if S & B == 1 B = 12288 end
-            append!(R2, B)
-            r >>= 1
-        end
-    end
-    return nttbool ? NTTK(Poly(R2), 12289) : Poly(R2)
+# Element-wise addtion of polynomials, in ring ZZ/Q
+function +(x::Array{Int16, 1}, y::Array{Int16, 1}, Q::LatticeModuli)
+    l = length(x)
+    assert(l == length(y))
+    return [(x[i] + y[i]) % Int16(Q) for i in 1:l]
 end
 
-# Trivially compression encode an octet array into a message polynomial
-#  => compress 8 bytes into a 1 coefficient (64-bit).
-# FIXME: Currently input MUST be length power of 2.
-# FIXME: Doesn't seems to correctly handle compression... Redir to B2P() for now.
-function bytes2poly(M::Array{UInt8, 1})
-    return B2P(M)   # Only temporary
-    O, B = Array{Int64, 1}(), "0b"
-    for i in 1:length(M)
-        if i % 8 == 1 && i > 1
-            N = false
-            assert(length(B) == 66)
-            if B[3] == '1'
-                B = "0b" * B[4:end]
-                N = true
-            end
-            append!(O, parse(Int64, B) * (N ? -1 : 1))
-            B = "0b"
-        end
-        B *= bits(M[i])
-    end
-    return Poly(O)
+# Generate a CS-random polynomial of length L in ring ZZ/Q
+function genrandpoly{T<:Integer}(L::T, Q::LatticeModuli; ntt_::Bool = false, N::Integer = 1024)
+    A, R = Array{Int16, 1}(), RandomDevice()
+    for i in 1:L append!(A, rand(R, Int16) % Int16(Q)) end
+    return ntt_ ? NTTK(A, Q, N) : A
 end
-B2P(M::Array{UInt8, 1}) = Poly(Array{Int64, 1}(M))  # Ineffective for MEM but works.
-
-# Trivially compression decode a message polynomial into an octet array
-#  => decompress 1 coefficient into 8 bytes.
-# FIXME: Returns empty Array{UInt8, 1}(). Redir to P2B() for now.
-function poly2bytes(P::Poly{Int64})
-    return P2B(P)
-    O, M = Array{UInt8, 1}(), P.a
-    for i in 1:length(M)
-        X = abs(M[i])
-        I = [UInt8((X & 0x00000000000000ff)), #+ (M[i] < 0 ? 0x1000000000000000 : 0x0)),
-             UInt8((X & 0x000000000000ff00) >> 8),
-             UInt8((X & 0x0000000000ff0000) >> 16),
-             UInt8((X & 0x00000000ff000000) >> 24),
-             UInt8((X & 0x000000ff00000000) >> 32),
-             UInt8((X & 0x0000ff0000000000) >> 40),
-             UInt8((X & 0x00ff000000000000) >> 48),
-             UInt8((X & 0xff00000000000000) >> 56)]
-        vcat(O, I)
-    end
-    return O
-end
-P2B(P::Poly{Int64}) = Array{UInt8, 1}(P.a)  # Ineffective for MEM but works.

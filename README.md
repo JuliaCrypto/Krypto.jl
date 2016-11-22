@@ -10,7 +10,7 @@ A futuristic crypto library. In Julia.
 ## Current features
 - 100% native Julia implementations. No wrappers. No non-Julia dependencies.
 - Support for RSA (working primitives, [PKCS#1](https://en.wikipedia.org/wiki/PKCS_1) not working)
-- Support for RLWE (non-working primitives; working, non-reviewed cryptoscheme)
+- Support for RLWE (working crypto-primitives, non-working NTT)
 - Support for ECC math (no primitives of yet)
 
 ## Algorithms
@@ -38,7 +38,6 @@ Implementation status: **complete**, *partial*. The higher an algorithm is liste
 `Krypto.jl` requires some packages to run properly. Besides the `julia` binary, you'll need the following.
 - `SHA` (general use of SHA), at least `0.3`
 - `Primes` (needed by RSA and others), at least `0.1.1`
-- `Polynomials` (needed by RLWE), at least `0.1.0`
 
 ## License
 MIT. Whatever happens to you, remember: it's not my fault but the code you used is. ¯\\_(ツ)_/¯

@@ -4,6 +4,10 @@
 # Reference:       https://www.microsoft.com/en-us/research/wp-content/uploads/2016/05/RLWE-1.pdf
 # x86 C Reference: https://github.com/dconnolly/msr-latticecrypto/blob/master/ntt_constants.c
 
+# Precomputed table Ω, storing primitive
+# roots. Used in plain NTT.
+global const Ω = [12288, 1479, 8246, 4134, 6429, 1351, 7678, 7935, 5559]
+
 # Precomputed table Ψ_{rev, k^{-1}}, storing
 # scaled powers of ψ in bit-reversed order.
 # Support:  N = {512, 1024}, at Q = 12289

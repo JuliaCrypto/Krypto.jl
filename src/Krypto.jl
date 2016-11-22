@@ -3,7 +3,6 @@ module Krypto
 using Compat
 using SHA
 using Primes
-using Polynomials
 
 ########  Generic  ########
 export encrypt, decrypt, sign, verify
@@ -57,10 +56,12 @@ export CurveFP,                 # Curve object
 
 ########  LatticeMath.jl  ########
 export KRED, KRED2,              # Reduction functions (for NTT)
+       (+), (*),
+       LatticeModuli, Int16, Int,
        UniformSample,            # Uniformly sample from [-B:B] an polynomial in ring
        NTTK, INTTK,              # Forward Number Theoretic Transform and its inverse
-       GenerateA, GenerateR2,    # Generator functions for testing and crypto-deployment
-       poly2bytes, bytes2poly    # Trivial en/decode of polynomials into/from octet arrays
+#      GenerateA, GenerateR2,    # Generator functions for testing and crypto-deployment
+       genrandpoly
 
 
 ########  HMAC.jl  ########
