@@ -12,6 +12,7 @@ A futuristic crypto library. In Julia.
 - Support for RSA (working primitives, [PKCS#1](https://en.wikipedia.org/wiki/PKCS_1) not working)
 - Support for RLWE (working crypto-primitives, non-working NTT)
 - Support for ECC math (no primitives of yet)
+- Support for Salsa20 (fully working)
 
 ## Algorithms
 Implementation status: **complete**, *partial*. The higher an algorithm is listed in a specific section, the more of it is actually implemented.
@@ -31,7 +32,7 @@ Implementation status: **complete**, *partial*. The higher an algorithm is liste
 - [Serpent](https://en.wikipedia.org/wiki/Serpent_(cipher))
 
 #### Stream ciphers
-- [Salsa20](https://en.wikipedia.org/wiki/Salsa20)
+- [**Salsa20**](https://en.wikipedia.org/wiki/Salsa20)
 - [Rabbit](https://en.wikipedia.org/wiki/Rabbit_(cipher))
 
 ## Dependencies

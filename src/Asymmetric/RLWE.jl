@@ -45,7 +45,6 @@ function RLWEEncrypt(K::RLWEPubKey, M::Array{UInt8, 1})
     ERR = [UniformSample(B, K.N) for i in 1:3]
     E1, E2 = NTTK(ERR[1], K.Q, K.N), NTTK(ERR[2], K.Q, K.N)
     M16 = [Int16(x * QBY2) % Int16(Q) for x in M]
-    println(length(M16))
     C1 = +(*(K.A, E1, K.Q), E2, K.Q)
     C2 = +(*(K.P, E1, K.Q), NTTK(+(ERR[3], M16), K.Q, K.N), K.Q)
     return C1, C2

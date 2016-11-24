@@ -9,9 +9,9 @@ export encrypt, decrypt, sign, verify
 
 
 ########  Crypto types  ########
-export CryptoAlgorithm, SymmetricCryptoAlgorithm, AsymmetricCryptoAlgorithm
+export CryptoAlgorithm, SymmetricCrypto, AsymmetricCrypto
 export RSA, RLWE, ECC, NTRU
-export AES, Blowfish, Twofish, Threefish, Serpent
+export AES, Blowfish, Twofish, Threefish, Serpent, Salsa20, RABBIT
 
 
 ########  RSA.jl  ########
@@ -64,6 +64,11 @@ export KRED, KRED2,              # Reduction functions (for NTT)
        genrandpoly
 
 
+########  Salsa20.jl  ########
+export SALSA20,                         # Salsa20 cryptographic primitive
+       Salsa20Stream, Salsa20StreamXOR  # Salsa20 stream expander primitives (plain, xor)
+
+
 ########  HMAC.jl  ########
 export HMAC               # Hash-based message authentication code
 
@@ -78,5 +83,6 @@ include("Util/HMAC.jl")
 include("Asymmetric/RSA.jl")
 include("Asymmetric/ECC.jl")
 include("Asymmetric/RLWE.jl")
+include("Symmetric/Salsa20.jl")
 
 end # module Krypto

@@ -28,6 +28,24 @@ function rev{T<:Integer}(X::Array{T, 1})
     return A
 end
 
+# Cyclic bit-shift (rotation) to left = ROL
+function rotl{T<:Integer}(u::T, c::Int)
+    m = 8 * sizeof(typeof(u)) - 1
+    c &= m
+    return (u << c) | (u >> (m & (-c)))
+end
+
+# Cyclic bit-shift (rotation) to right = ROR
+function rotr{T<:Integer}(u::T, c::Int)
+    m = 8 * sizeof(typeof(u)) - 1
+    c &= m
+    return (u >> c) | (u << (m & (-c)))
+end
+
+# Flatten an nested array
+# See http://codegolf.stackexchange.com/a/80140
+flat(x, y = vcat(x...)) = x == y ? x : flat(y)
+
 # Get first power of E, greater than N
 function gpow{T<:Integer}(N::T, E::Integer = 2)
     if N <= 0 return 0 end

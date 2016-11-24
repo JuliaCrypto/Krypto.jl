@@ -1,22 +1,22 @@
 # Types declarations for Krypto.jl
 # Copyright (C): Jaka Smrekar (vinctux) <vinctux@outlook.com>, 2016
 
-using Krypto
-
 # Primitives
 abstract CryptoAlgorithm
-abstract SymmetricCryptoAlgorithm <: CryptoAlgorithm
-abstract AsymmetricCryptoAlgorithm <: CryptoAlgorithm
+abstract SymmetricCrypto <: CryptoAlgorithm
+abstract AsymmetricCrypto <: CryptoAlgorithm
 
-# Asymmetric algorithms
-abstract RSA <: AsymmetricCryptoAlgorithm
-abstract ECC <: AsymmetricCryptoAlgorithm
-abstract RLWE <: AsymmetricCryptoAlgorithm
-abstract NTRU <: AsymmetricCryptoAlgorithm
+# Asymmetric
+abstract RSA <: AsymmetricCrypto
+abstract ECC <: AsymmetricCrypto
+abstract RLWE <: AsymmetricCrypto
+abstract NTRU <: AsymmetricCrypto
 
-# Symmetric (only non-stream for now)
-abstract AES <: SymmetricCryptoAlgorithm
-abstract Blowfish <: SymmetricCryptoAlgorithm
-abstract Twofish <: SymmetricCryptoAlgorithm
-abstract Threefish <: SymmetricCryptoAlgorithm
-abstract Serpent <: SymmetricCryptoAlgorithm
+# Symmetric
+abstract AES <: SymmetricCrypto
+abstract Blowfish <: SymmetricCrypto
+abstract Twofish <: SymmetricCrypto
+abstract Threefish <: SymmetricCrypto
+abstract Serpent <: SymmetricCrypto
+abstract Salsa20 <: SymmetricCrypto
+abstract RABBIT <: SymmetricCrypto
